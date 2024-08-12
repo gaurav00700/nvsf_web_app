@@ -6,22 +6,21 @@ This repository contains a sample project that includes both a FastAPI backend a
 my_project/
 │
 ├── app/
-│   ├── main.py          # Streamlit application
-│   └── server.py        # FastAPI application
+│   ├── api.py          # Streamlit application
+│   └── app.py          # FastAPI application
 │
 ├── requirements.txt     # Python dependencies
-├── Dockerfile           # Dockerfile for combined setup
-├── Dockerfile.fastapi   # Dockerfile for FastAPI
-├── Dockerfile.streamlit # Dockerfile for Streamlit
+├── Dockerfile.api_img   # Dockerfile for FastAPI
+├── Dockerfile.app_img  # Dockerfile for Streamlit
 └── docker-compose.yml   # Docker Compose configuration
 
 ```
 
 # Prerequisites
 1. Docker
-2. Docker Compose (optional, for multi-container setup)
+2. Docker Compose
 
-## Setup
+# Setup
 1. Build Docker Images
 You can choose between building a combined Docker image or separate images for FastAPI and Streamlit.
 
@@ -39,16 +38,16 @@ You can choose between building a combined Docker image or separate images for F
     docker build -t app_img -f Dockerfile.app .
     ```
 2. Run the Containers
-    Separate Containers
-    To run separate containers for FastAPI and Streamlit:
-    ```
-    docker run -d -p 8000:8000 api_img
-    docker run -d -p 8501:8501 app_img
-    ```
-    OR Using Docker Compose
+    Using Docker Compose
     To manage both containers using Docker Compose, you can use the provided docker-compose.yml file:
     ```
     docker-compose up
+    ```
+    OR Separate Containers manually
+    To run separate containers for FastAPI and Streamlit:
+    ```
+    docker run -d -p 8000:8000 --name fastapi --network my_network api_img
+    docker run -d -p 8501:8501 --name streamlit --network my_network -e FASTAPI_URL=http://fastapi:8000 app_img
     ```
 3. Access the Applications
 FastAPI: Open `http://localhost:8000` in your web browser to access the FastAPI backend.
