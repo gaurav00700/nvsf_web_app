@@ -21,9 +21,7 @@ my_project/
 2. Docker Compose
 
 # Setup
-1. Build Docker Images
-    ### Separate Docker Images
-    For running FastAPI and Streamlit in separate containers:
+1. Build Docker Images for running FastAPI and Streamlit in separate containers:
 
     ``` 
     docker build -t api_img -f Dockerfile.api .
