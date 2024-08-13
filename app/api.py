@@ -26,6 +26,6 @@ def generate_output(data: Data):
     print(f"Image Width: {data.image_w}")
 
 @app.post("/submit")
-def submit_data(data):
-    output = capture_output(generate_output(data))
+def submit_data(data: Data):
+    output = capture_output(generate_output, data)
     return {"output": output}
