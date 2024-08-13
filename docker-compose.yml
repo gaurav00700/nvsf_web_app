@@ -1,21 +1,36 @@
-version: '3'
+version: '3.8'
 services:
   fastapi:
-    image: api_img
+    build: 
+      context: .
+      dockerfile: Dockerfile.api    # Dockerfile for FastAPI
+    image: api_img:latest
     ports:
-      - "8000:8000"
+      - "8000:8000"   # Map port 8000 of the container to port 8000 on the host
     networks:
       - my_network
+    # Optional: Add health check
+    # healthcheck:
+    #   test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+    #   interval: 30s
+    #   retries: 3
 
   streamlit:
-    image: app_img
+    build: 
+      context: .
+      dockerfile: Dockerfile.app    # Dockerfile for Streamlit
+    image: app_img:latest
     ports:
-      - "8501:8501"
+      - "8501:8501"   # Map port 8501 of the container to port 8501 on the host
     networks:
       - my_network
     environment:
       - FASTAPI_URL=http://fastapi:8000  # Pass the FastAPI service URL as an environment variable
-
+    # Optional: Add health check
+    # healthcheck:
+    #   test: ["CMD", "curl", "-f", "http://localhost:8501/health"]
+    #   interval: 30s
+    #   retries: 3
 networks:
   my_network:
     driver: bridge

@@ -22,7 +22,13 @@ my_project/
 
 # Setup
 1. Build Docker Images for running FastAPI and Streamlit in separate containers:
+    Using Docker Compose
+    ``` 
+    docker compose build
+    ```
 
+    OR Manually
+    To build separate containers for FastAPI and Streamlit:
     ``` 
     docker build -t api_img -f Dockerfile.api .
     docker build -t app_img -f Dockerfile.app .
@@ -31,9 +37,9 @@ my_project/
     Using Docker Compose
     To manage both containers using Docker Compose, you can use the provided docker-compose.yml file:
     ```
-    docker-compose up
+    docker compose up
     ```
-    OR Separate Containers manually
+    OR Manually
     To run separate containers for FastAPI and Streamlit:
     ```
     docker run -d -p 8000:8000 --name fastapi --network my_network api_img
