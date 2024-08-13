@@ -3,10 +3,11 @@ services:
   fastapi:
     build: 
       context: .
-      dockerfile: Dockerfile.api    # Dockerfile for FastAPI
+      dockerfile: Dockerfile    # Dockerfile for FastAPI
+      target: api_img           # Target of docker image for multi stage build
     image: api_img:latest
     ports:
-      - "8000:8000"   # Map port 8000 of the container to port 8000 on the host
+      - "8000:8000"             # Map port 8000 of the container to port 8000 on the host
     networks:
       - my_network
     # Optional: Add health check
@@ -18,10 +19,11 @@ services:
   streamlit:
     build: 
       context: .
-      dockerfile: Dockerfile.app    # Dockerfile for Streamlit
+      dockerfile: Dockerfile    # Dockerfile for Streamlit
+      target: app_img           # Target of docker image for multi stage build
     image: app_img:latest
     ports:
-      - "8501:8501"   # Map port 8501 of the container to port 8501 on the host
+      - "8501:8501"             # Map port 8501 of the container to port 8501 on the host
     networks:
       - my_network
     environment:
