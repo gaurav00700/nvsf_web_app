@@ -6,13 +6,14 @@ This repository contains a sample project that includes both a FastAPI backend a
 my_project/
 │
 ├── app/
-│   ├── api.py          # Streamlit application
-│   └── app.py          # FastAPI application
+│   ├── api.py              # Streamlit application
+│   └── app.py              # FastAPI application
 │
-├── requirements.txt     # Python dependencies
-├── Dockerfile.api_img   # Dockerfile for FastAPI
-├── Dockerfile.app_img  # Dockerfile for Streamlit
-└── docker-compose.yml   # Docker Compose configuration
+├── requirements.txt        # Python dependencies
+├── Dockerfile              # Multistage Dockerfile
+├── Dockerfile.api_img      # Dockerfile for FastAPI
+├── Dockerfile.app_img      # Dockerfile for Streamlit
+└── docker-compose.yml      # Docker Compose configuration
 
 ```
 
