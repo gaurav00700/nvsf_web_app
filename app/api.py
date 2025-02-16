@@ -1,25 +1,48 @@
-from fastapi import FastAPI
-from pydantic import BaseModel, Field
+from fastapi import FastAPI, Depends
+import joblib
 import io
 import sys
-from typing import List
+from pydantic import BaseModel
+from functools import lru_cache
 
 app = FastAPI()
 
-class Data(BaseModel):
-    dataset_name: str = Field(description= " Name of the Dataset ")
-    sequence_name: str = Field(description= " Name of the Sequence ")
-    delta_pos_lidar: List[float] = Field(description= " Change in the Position of Lidar sensor in m ")
-    delta_orient_lidar: List[float] = Field(description= " Change in the Orientation of Lidar sensor in degree ")
-    intrinsics_lidar_new: List[float] = Field(description= " New Vertical Intrinsic parameter of Lidar ")
-    intrinsics_hoz_lidar_new: List[float] = Field(description= " New horizontal Intrinsic paramter of Lidar ")
-    V_lidar_ch: int = Field(description= " Vertical beams of Lidar ")
-    H_lidar_ch: int = Field(description= " Horizontal beams of Lidar ")
-    Lidar_range: float = Field(description= " Range of Lidar in m ")
-    delta_pos_cam: List[float] = Field(description= " Change in the Position of Camera in m ")
-    delta_orient_cam: List[float] = Field(description= " Change in the Orientation of Camera in m ")
-    image_H: int = Field(description= " New Height of Camera sensor ")
-    image_W: int = Field(description= " New Width of Camera sensor ")
+# Singleton model instance via factory method using joblib
+class NVSFModel:
+    _instance = None
+    def __new__(cls):
+        if cls._instance is None:
+            # Load the model during initialization
+            cls._instance = super().__new__(cls)
+            cls._instance.model = joblib.load("path/to/the/model")
+        return cls._instance
+
+# class NVSFModel:
+#     @staticmethod
+#     def get_model():
+#         if not hasattr(NVSFModel, 'model'):
+#             # Load the model from disk (assuming it's pickled)
+#             NVSFModel.model = joblib.load("path/to/the/model")
+#         return NVSFModel.model
+
+# Create an instance of ModelSingleton
+model_singleton = NVSFModel()
+
+# Define the input data structure using Pydantic
+class InputData(BaseModel):
+    dataset_name: str
+    sequence_name: str
+    delta_pos_lidar: list[float]
+    delta_orient_lidar: list[float]
+    intrinsics_lidar_new: list[float]
+    intrinsics_hoz_lidar_new: list[float]
+    V_lidar_ch: int
+    H_lidar_ch: int
+    Lidar_range: float
+    delta_pos_cam: list[float]
+    delta_orient_cam: list[float]
+    image_H: int
+    image_W: int
 
 # Function to capture terminal output
 def capture_output(func, *args, **kwargs):
@@ -29,53 +52,35 @@ def capture_output(func, *args, **kwargs):
     sys.stdout = sys.__stdout__
     return buffer.getvalue()
 
-# Function to print data for output generation
-def generate_output(data: Data):
-    print(f"Dataset Name: {data.dataset_name}")
-    print(f"Sequence Name: {data.sequence_name}")
-    print(f"Delta Lidar position: {data.delta_pos_lidar}")
-    print(f"Delta Lidar orientation: {data.delta_orient_lidar}")
-    print(f"Lidar vertical fov: {data.intrinsics_lidar_new}")
-    print(f"Lidar horizontal fov: {data.intrinsics_hoz_lidar_new}")
-    print(f"Lidar vertical beams: {data.V_lidar_ch}")
-    print(f"Lidar horizontal beams: {data.H_lidar_ch}")
-    print(f"Lidar range: {data.Lidar_range}")
-    print(f"Delta camera position: {data.delta_pos_cam}")
-    print(f"Delta camera orientation: {data.delta_orient_cam}")
-    print(f"Image Height: {data.image_H}")
-    print(f"Image Width: {data.image_W}")
+# Caching function using lru_cache
+@lru_cache(maxsize=10)  # Adjust maxsize as needed
+def generate_output(data: InputData):
+    key = f"{data.dataset_name}_{data.sequence_name}"
+
+    # Load the NVSF model if it hasn't been loaded before
+    # model = NVSFModel.get_model()
+    model = model_singleton
+    
+    # Generate output based on the data and model
+    result = capture_output(lambda d: model(d), data)
+    return {"result": result}
 
 # Endpoint to provide help information (GET request)
-# @app.get("/help")
-# def get_help():
-#     help_text = """
-#     This API allows you to submit lidar and camera configuration data.
-    
-#     Endpoint /submit expects the following fields in JSON:
-#     - dataset_name: str
-#     - sequence_name: str
-#     - delta_pos_lidar: List[float]
-#     - delta_orient_lidar: List[float]
-#     - intrinsics_lidar_new: List[float]
-#     - intrinsics_hoz_lidar_new: List[float]
-#     - V_lidar_ch: int
-#     - H_lidar_ch: int
-#     - Lidar_range: float
-#     - delta_pos_cam: List[float]
-#     - delta_orient_cam: List[float]
-#     - image_H: int
-#     - image_W: int
+@app.get("/help")
+def get_help():
+    return {
+        "description": """
+        This API provides usage instructions for generating output based on input parameters.
+        The model is loaded once and cached to avoid redundant predictions with the same inputs.
+        """
+    }
 
-#     Use POST method on /submit with the above fields to get the formatted output.
-#     """
-#     return {"help": help_text}
-
-# Endpoint to process and return the data (POST request)
-@app.post("/submit")
-def submit_data(data: Data):
-    output = capture_output(generate_output, data)
-    return {"output": output}
+# Endpoint that uses caching
+@app.post("/generate_output/")
+async def generate_output_endpoint(data: InputData):
+    result = generate_output(data)
+    return {"result": result}
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="127.0.0.1", port=8000)
