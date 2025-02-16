@@ -1,5 +1,6 @@
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI, Depends, HTTPException
 import joblib
+from threading import Lock
 import io
 import sys
 from pydantic import BaseModel
@@ -10,11 +11,15 @@ app = FastAPI()
 # Singleton model instance via factory method using joblib
 class NVSFModel:
     _instance = None
+    _lock = None # Thread lock for synchronization
+    
     def __new__(cls):
         if cls._instance is None:
-            # Load the model during initialization
-            cls._instance = super().__new__(cls)
-            cls._instance.model = joblib.load("path/to/the/model")
+            with cls._lock:
+                if cls._instance is None:
+                    # Load the model during initialization
+                    cls._instance = super().__new__(cls)
+                    cls._instance.model = joblib.load("path/to/the/model")
         return cls._instance
 
 # class NVSFModel:
@@ -78,8 +83,11 @@ def get_help():
 # Endpoint that uses caching
 @app.post("/generate_output/")
 async def generate_output_endpoint(data: InputData):
-    result = generate_output(data)
-    return {"result": result}
+    try:
+        result = generate_output(data)
+        return {"result": result}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
     import uvicorn
