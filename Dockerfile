@@ -29,6 +29,9 @@ CMD ["uvicorn", "api:app", "--host", "0.0.0.0", "--port", "8000"]
 #Stage2: Building app image
 FROM base_img as app_img
 
+# Set environment variables
+ENV FASTAPI_URL=http://localhost:8000
+
 # Expose the port to run FastAPI and Streamlit
 EXPOSE 8501
 

@@ -3,23 +3,25 @@ import joblib
 from threading import Lock
 import io
 import sys
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from functools import lru_cache
+import threading
 
 app = FastAPI()
 
 # Singleton model instance via factory method using joblib
 class NVSFModel:
     _instance = None
-    _lock = None # Thread lock for synchronization
-    
+    _lock = None  # Thread lock for synchronization
+    lock = threading.Lock()  # Correctly initialize the lock
+
     def __new__(cls):
         if cls._instance is None:
-            with cls._lock:
+            with cls.lock:  # Use the class-level lock
                 if cls._instance is None:
-                    # Load the model during initialization
                     cls._instance = super().__new__(cls)
-                    cls._instance.model = joblib.load("path/to/the/model")
+                    # cls._instance.model = joblib.load("path/to/the/model") 
+                    cls._instance.model = None  # TODO for testing purposes
         return cls._instance
 
 # class NVSFModel:
@@ -35,19 +37,19 @@ model_singleton = NVSFModel()
 
 # Define the input data structure using Pydantic
 class InputData(BaseModel):
-    dataset_name: str
-    sequence_name: str
-    delta_pos_lidar: list[float]
-    delta_orient_lidar: list[float]
-    intrinsics_lidar_new: list[float]
-    intrinsics_hoz_lidar_new: list[float]
-    V_lidar_ch: int
-    H_lidar_ch: int
-    Lidar_range: float
-    delta_pos_cam: list[float]
-    delta_orient_cam: list[float]
-    image_H: int
-    image_W: int
+    dataset_name: str = Field(default="dataset1", description="Name of the dataset")
+    sequence_name: str = Field(default="sequence1", description="Name of the sequence")
+    delta_pos_lidar: list[float] = Field(default=[0.0, 0.0, 0.0], description="Delta position (x, y, z) of the lidar in camera coordinates")
+    delta_orient_lidar: list[float] = Field(default=[0.0, 0.0, 0.0], description="Delta orientation (roll, pitch, yaw) of the lidar in camera coordinates")
+    intrinsics_lidar_new: list[float] = Field(default=[0.0, 0.0], description="Vertical intrinsics of the lidar")
+    intrinsics_hoz_lidar_new: list[float] = Field(default=[0.0, 0.0], description="Horizontal intrinsics of the lidar")
+    V_lidar_ch: int = Field(default=0, description="Number of vertical beams in the lidar")
+    H_lidar_ch: int = Field(default=0, description="Number of horizontal beams in the lidar")
+    Lidar_range: float = Field(default=0.0, description="Range of the lidar")
+    delta_pos_cam: list[float] = Field(default=[0.0, 0.0, 0.0], description="Delta position (x, y, z) of the camera")
+    delta_orient_cam: list[float] = Field(default=[0.0, 0.0, 0.0], description="Delta orientation (roll, pitch, yaw) of the camera")
+    image_H: int = Field(default=0, description="Height of the image")
+    image_W: int = Field(default=0, description="Width of the image")
 
 # Function to capture terminal output
 def capture_output(func, *args, **kwargs):
@@ -59,15 +61,16 @@ def capture_output(func, *args, **kwargs):
 
 # Caching function using lru_cache
 @lru_cache(maxsize=10)  # Adjust maxsize as needed
-def generate_output(data: InputData):
+def query_model(data: InputData):
     key = f"{data.dataset_name}_{data.sequence_name}"
 
     # Load the NVSF model if it hasn't been loaded before
-    # model = NVSFModel.get_model()
-    model = model_singleton
+    # model = NVSFModel.get_model() 
+    model = model_singleton # TODO for testing purposes
     
     # Generate output based on the data and model
-    result = capture_output(lambda d: model(d), data)
+    # result = capture_output(lambda d: model(d), data)
+    result = "test output"
     return {"result": result}
 
 # Endpoint to provide help information (GET request)
@@ -81,14 +84,16 @@ def get_help():
     }
 
 # Endpoint that uses caching
-@app.post("/generate_output/")
-async def generate_output_endpoint(data: InputData):
+@app.post("/generate/")
+async def generate(data: InputData):
     try:
-        result = generate_output(data)
+        result = query_model(data)
         return {"result": result}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+    
 
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="127.0.0.1", port=8000)
+    # uvicorn run app:app --reload --port 8000 --host 0.0.0.0
